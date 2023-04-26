@@ -358,18 +358,18 @@ function getProductTaxonomies($product) {
 
     return $taxonomies_data;
 }
-// function recompileAddonsData($product_id) {
-// 	$addons = get_product_addons($product_id, false);
-// 	foreach($addons as $key => $addon) {
-// 		foreach($addon['options'] as $option_key => $option){
-// 			// label_slug
-// 			$addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
-// 			// field_name
-// 			$addons[$key]['options'][$option_key]['field_name'] = 'addon-'.sanitize_title($addon['field-name']);
-// 		}
-// 	}
-// 	return $addons;
-// }
+function recompileAddonsData($product_id) {
+	$addons = get_product_addons($product_id, false);
+	foreach($addons as $key => $addon) {
+		foreach($addon['options'] as $option_key => $option){
+			// label_slug
+			$addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
+			// field_name
+			$addons[$key]['options'][$option_key]['field_name'] = 'addon-'.sanitize_title($addon['field-name']);
+		}
+	}
+	return $addons;
+}
 
 
 function getProductDataForTypeSense($product)
@@ -378,7 +378,7 @@ function getProductDataForTypeSense($product)
     $product_id = $product->get_id();
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
-    //$addons = json_encode(recompileAddonsData($product_id, false));
+    $addons = json_encode(recompileAddonsData($product_id, false));
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
         $attachment = get_post($attachment_id);
@@ -391,28 +391,28 @@ function getProductDataForTypeSense($product)
     }, $attachment_ids);
 
 
-    // $meta = YoastSEO()->meta->for_post($product_id);
-    // $fullHead = wp_gql_seo_get_full_head($meta);
+    $meta = YoastSEO()->meta->for_post($product_id);
+    $fullHead = wp_gql_seo_get_full_head($meta);
 
-    //  $seo_head = '';
-    // if (is_plugin_active('wordpress-seo/wp-seo.php')) {
-    //     include_once ABSPATH . 'wp-admin/includes/plugin.php';
-    //     $prev_post = $GLOBALS['post'];
-    //     $GLOBALS['post'] = get_post($product->get_id());
+     $seo_head = '';
+    if (is_plugin_active('wordpress-seo/wp-seo.php')) {
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
+        $prev_post = $GLOBALS['post'];
+        $GLOBALS['post'] = get_post($product->get_id());
 
-    //     $wpseo_frontend = WPSEO_Frontend::get_instance();
-    //     $title = $wpseo_frontend->get_content_title();
-    //     $metadesc = $wpseo_frontend->get_meta_description();
+        $wpseo_frontend = WPSEO_Frontend::get_instance();
+        $title = $wpseo_frontend->get_content_title();
+        $metadesc = $wpseo_frontend->get_meta_description();
 
-    //     $canonical = WPSEO_Meta::get_value('canonical');
-    //     $canonical = $canonical ? $canonical : get_permalink($product->get_id());
+        $canonical = WPSEO_Meta::get_value('canonical');
+        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
 
-    //     $seo_head = "<title>$title</title>";
-    //     $seo_head .= "<meta name='description' content='$metadesc' />";
-    //     $seo_head .= "<link rel='canonical' href='$canonical' />";
+        $seo_head = "<title>$title</title>";
+        $seo_head .= "<meta name='description' content='$metadesc' />";
+        $seo_head .= "<link rel='canonical' href='$canonical' />";
 
-    //     $GLOBALS['post'] = $prev_post;
-    // }
+        $GLOBALS['post'] = $prev_post;
+    }
 
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
@@ -435,16 +435,16 @@ function getProductDataForTypeSense($product)
     $categories = get_the_terms($product_id, 'product_cat');
     $categoryData = getTermData($categories);
 
-    // $ingredients = get_the_terms($product_id, 'product_ingredients');
-    // $ingredientData = array_map(function ($term) {
-    //     return [
-    //         'name' => $term->name,
-    //         'description' => $term->description,
-    //         'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
-    //         'slug' => $term->slug,
-    //         'url' => get_term_link($term->term_id),
-    //     ];
-    // }, $ingredients);
+    $ingredients = get_the_terms($product_id, 'product_ingredients');
+    $ingredientData = array_map(function ($term) {
+        return [
+            'name' => $term->name,
+            'description' => $term->description,
+            'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
+            'slug' => $term->slug,
+            'url' => get_term_link($term->term_id),
+        ];
+    }, $ingredients);
     
     $product_type = $product->get_type();
 
@@ -511,45 +511,46 @@ function getProductDataForTypeSense($product)
     }
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
-  $attributes = [];
+    
+//   $attributes = [];
 
-    foreach ($product->get_attributes() as $attribute) {
-        try {
-            $options = $attribute->get_options();
+//     foreach ($product->get_attributes() as $attribute) {
+//         try {
+//             $options = $attribute->get_options();
 
-            if (is_array($options) && !empty($options)) {
-                $options = array_map('strval', $options);
+//             if (is_array($options) && !empty($options)) {
+//                 $options = array_map('strval', $options);
 
-                $attributes[] = [
-                    'id' => strval($attribute->get_id()),
-                    'name' => $attribute->get_name(),
-                    'position' => $attribute->get_position(),
-                    'visible' => $attribute->get_visible(),
-                    'variation' => $attribute->get_variation(),
-                    'options' => $options,
-                ];
-            } else {
-                error_log("Warning: Empty or non-array options for attribute of product ID: {$product->get_id()}");
-            }
-        } catch (Exception $e) {
-            error_log("Error processing attribute for product ID: {$product->get_id()}. Message: " . $e->getMessage());
-        }
-    }
+//                 $attributes[] = [
+//                     'id' => strval($attribute->get_id()),
+//                     'name' => $attribute->get_name(),
+//                     'position' => $attribute->get_position(),
+//                     'visible' => $attribute->get_visible(),
+//                     'variation' => $attribute->get_variation(),
+//                     'options' => $options,
+//                 ];
+//             } else {
+//                 error_log("Warning: Empty or non-array options for attribute of product ID: {$product->get_id()}");
+//             }
+//         } catch (Exception $e) {
+//             error_log("Error processing attribute for product ID: {$product->get_id()}. Message: " . $e->getMessage());
+//         }
+//     }
 
-    // Add error logging to the shipping part
-    $shipping = [];
-    try {
-        $shipping = [
-            'weight' => $product->get_weight(),
-            'dimensions' => [
-                'length' => $product->get_length(),
-                'width' => $product->get_width(),
-                'height' => $product->get_height(),
-            ],
-        ];
-    } catch (Exception $e) {
-        error_log("Error processing shipping for product ID: {$product->get_id()}. Message: " . $e->getMessage());
-    }
+//     // Add error logging to the shipping part
+//     $shipping = [];
+//     try {
+//         $shipping = [
+//             'weight' => $product->get_weight(),
+//             'dimensions' => [
+//                 'length' => $product->get_length(),
+//                 'width' => $product->get_width(),
+//                 'height' => $product->get_height(),
+//             ],
+//         ];
+//     } catch (Exception $e) {
+//         error_log("Error processing shipping for product ID: {$product->get_id()}. Message: " . $e->getMessage());
+//     }
 
 
     $product_data = [
@@ -560,7 +561,7 @@ function getProductDataForTypeSense($product)
         'name' => $product->get_name(),
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
-        //'seoFullHead' => $seo_head,
+        'seoFullHead' => $seo_head,
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
@@ -576,7 +577,7 @@ function getProductDataForTypeSense($product)
         'isFeatured' => $product->get_featured(),
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => $product_gallery,
-        //'addons' => $addons,
+        'addons' => $addons,
         'taxonomies' => $taxonomies,
         'productType' => $product_type,
         // Add product type
@@ -585,13 +586,10 @@ function getProductDataForTypeSense($product)
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
         'additionalTabs' => $formatted_additional_tabs,
-        //'seo' => $seo_head,
-        'additional_information_attributes' => $attributes,
-        'additional_information_shipping' => $shipping,
+        'seo' => $seo_head,
+        // 'attributes' => $attributes,
+        // 'additional_information_shipping' => $shipping,
     ];
-        if (!$product_data) {
-        error_log("Error: Product data not found for product ID: " . $product->get_id());
-    }
     return $product_data;
 }
 
@@ -608,7 +606,7 @@ function products_to_typesense(){
         try {
             $client->collections[$collection_product]->delete();
         } catch (Exception $e) {
-            error_log("Error deleting collection: " . $e->getMessage()); // Log error message
+            // Don't error out if the collection was not found
         }
         $client->collections->create(
             [
@@ -621,7 +619,7 @@ function products_to_typesense(){
                     ['name' => 'name', 'type' => 'string'],
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                    //['name' => 'seoFullHead', 'type' => 'string'],
+                    ['name' => 'seoFullHead', 'type' => 'string'],
                     //['name' => 'thumbnail', 'type' => 'object'],
                     ['name' => 'sku', 'type' => 'string'],
                     ['name' => 'price', 'type' => 'object', 'fields' => [
@@ -638,29 +636,28 @@ function products_to_typesense(){
                     ['name' => 'isFeatured', 'type' => 'bool'],
                     ['name' => 'totalSales', 'type' => 'int64'],
                     //['name' => 'galleryImages', 'type' => 'object[]'],
-                    //['name' => 'addons', 'type' => 'string'],
+                    ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
-                    ['name' => 'additional_information_attributes', 'type' => 'object[]', 'facet' => true],
-                    ['name' => 'additional_information_shipping', 'type' => 'object', 'fields' => [
-                        ['name' => 'weight', 'type' => 'float'],
-                        ['name' => 'dimensions', 'type' => 'object', 'fields' => [
-                            ['name' => 'length', 'type' => 'float'],
-                            ['name' => 'width', 'type' => 'float'],
-                            ['name' => 'height', 'type' => 'float'],
-                        ]],
-                    ]],
+                    // ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
+                    // ['name' => 'attributes', 'type' => 'object[]', 'facet' => true],
+                    // ['name' => 'additional_information_shipping', 'type' => 'object', 'fields' => [
+                    //     ['name' => 'weight', 'type' => 'float'],
+                    //     ['name' => 'dimensions', 'type' => 'object', 'fields' => [
+                    //         ['name' => 'length', 'type' => 'float'],
+                    //         ['name' => 'width', 'type' => 'float'],
+                    //         ['name' => 'height', 'type' => 'float'],
+                    //     ]],
+                    // ]],
                 ],
                 'default_sorting_field' => 'updatedAt',
                 'enable_nested_fields' => true
             ]
         );
-
-        
+    
     // Set initial values for pagination and batch size
     $finished = false;
     $page = 1;
-    $batch_size = 50; // Adjust the batch size depending on your server's capacity
+    $batch_size = 100; // Adjust the batch size depending on your server's capacity
     $imported_products_count = 0;
 
     while (!$finished) {
@@ -682,15 +679,19 @@ function products_to_typesense(){
                 error_log("Skipping product ID: " . $product->get_id());
                 continue; // Skip this product if no product data is found
             }
+
             $products_batch[] = $product_data;
 
             // Free memory
             unset($product_data);
         }
+
         // Log the number of products in the batch
         error_log("Batch size: " . count($products_batch));
+
         // Increment the page number
         $page++;
+
         // Import products to Typesense
         try {
             $client->collections[$collection_product]->documents->import($products_batch);
@@ -699,8 +700,10 @@ function products_to_typesense(){
             error_log("Error importing products to Typesense: " . $e->getMessage());
         }
     }
+
     // After the while loop, print the number of imported products
     echo "Imported products count: " . $imported_products_count . "\n";
+
     wp_die();
 } catch (Exception $e) {
     $error_message = "Error: " . $e->getMessage();
@@ -711,6 +714,7 @@ function products_to_typesense(){
     </script>";
     echo "Error creating collection: " . $e->getMessage() . "\n";
 }
+
 }
 
 function menu_index_to_typesense()
